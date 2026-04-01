@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KRX Live Screener</title>
+<style>
+:root{--bg:#020617;--panel:#0f172a;--text:#e5e7eb;--muted:#94a3b8;--line:#1e293b;--green:#34d399;--blue:#60a5fa;--red:#f87171;--yellow:#fbbf24;--violet:#a78bfa}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#020617,#0b1220);color:var(--text);font-family:Inter,"Noto Sans KR",system-ui,sans-serif}
+.wrap{max-width:1460px;margin:0 auto;padding:24px}.grid{display:grid;gap:16px}.top{grid-template-columns:1.2fr .8fr}.main{grid-template-columns:1.05fr .95fr;margin-top:16px}
+.card{background:rgba(15,23,42,.95);border:1px solid var(--line);border-radius:28px;overflow:hidden}.hd{padding:22px 22px 8px}.bd{padding:0 22px 22px}
+h1,h2,h3,p{margin:0}.eyebrow{font-size:13px;color:var(--muted);margin-bottom:8px}.title{font-size:30px;font-weight:800}.sub{margin-top:8px;color:var(--muted);font-size:14px;line-height:1.55}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.badge{padding:8px 12px;border-radius:999px;font-size:12px;font-weight:800}.green{background:rgba(52,211,153,.15);color:#a7f3d0}.blue{background:rgba(96,165,250,.15);color:#bfdbfe}.yellow{background:rgba(251,191,36,.15);color:#fde68a}.violet{background:rgba(167,139,250,.15);color:#ddd6fe}.red{background:rgba(248,113,113,.15);color:#fecaca}
+.metrics{display:grid;gap:12px;grid-template-columns:repeat(4,1fr);margin-top:16px}.metric{background:rgba(2,6,23,.55);border:1px solid var(--line);border-radius:22px;padding:16px}.metric .k{color:var(--muted);font-size:13px;margin-bottom:8px}.metric .v{font-size:26px;font-weight:800}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}.btns{display:flex;gap:8px;flex-wrap:wrap}
+button,input,select{border:1px solid var(--line);background:#111827;color:var(--text);border-radius:16px;padding:11px 14px;font-size:14px}
+button{cursor:pointer;font-weight:800}button.primary{background:#2563eb;border-color:#2563eb}
+.table-wrap{border:1px solid var(--line);border-radius:22px;overflow:hidden}.scroll{max-height:420px;overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}thead{background:rgba(2,6,23,.96);position:sticky;top:0}th,td{padding:12px 14px;border-top:1px solid rgba(30,41,59,.7);text-align:left;white-space:nowrap}th{color:var(--muted);font-weight:800}
+.box,.step{background:rgba(2,6,23,.5);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}.muted{color:var(--muted)}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.pill{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800}
+@media (max-width:1100px){.top,.main,.metrics{grid-template-columns:1fr}.title{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="grid top">
+    <section class="card">
+      <div class="hd">
+        <div class="eyebrow">Live KRX Screener Frontend</div>
+        <div class="title">실데이터 한국증시 스크리너</div>
+        <div class="sub">Python API 서버에 연결해 종목 목록, 최근 1년 일봉, 상승전환 / 상승확률 / 세력의심 / 최종 추천 1종목을 불러옵니다.</div>
+        <div class="badges">
+          <span class="badge green">실데이터</span>
+          <span class="badge blue">최근 1년 일봉</span>
+          <span class="badge yellow">거래량/거래대금 반영</span>
+          <span class="badge violet">API 기반</span>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="metrics">
+          <div class="metric"><div class="k">확인 종목 수</div><div class="v" id="mChecked">-</div></div>
+          <div class="metric"><div class="k">분석 종목 수</div><div class="v" id="mAnalysed">-</div></div>
+          <div class="metric"><div class="k">최신 데이터 날짜</div><div class="v" id="mLatest">-</div></div>
+          <div class="metric"><div class="k">API 상태</div><div class="v" id="mHealth">-</div></div>
+        </div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="hd"><h2>설정</h2></div>
+      <div class="bd">
+        <div class="box">
+          <div class="muted">API Base URL</div>
+          <input id="apiBase" value="http://127.0.0.1:8000" style="width:100%;margin-top:8px" />
+        </div>
+        <div class="box">
+          <div class="muted">시장</div>
+          <select id="market" style="width:100%;margin-top:8px">
+            <option value="">전체</option>
+            <option value="KOSPI">KOSPI</option>
+            <option value="KOSDAQ">KOSDAQ</option>
+          </select>
+        </div>
+        <div class="box">
+          <div class="muted">분석 종목 수</div>
+          <input id="limit" type="number" value="80" min="10" max="300" style="width:100%;margin-top:8px" />
+        </div>
+        <div class="box">
+          <div class="muted">조회 기간(일)</div>
+          <input id="days" type="number" value="365" min="120" max="1500" style="width:100%;margin-top:8px" />
+        </div>
+        <button class="primary" id="runBtn" style="width:100%">실데이터 스크리닝 실행</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="grid main">
+    <section class="card">
+      <div class="hd"><h2>최종 1종목 추천</h2></div>
+      <div class="bd">
+        <div class="step"><b>추천 종목</b><div id="finalPick" style="margin-top:8px">-</div></div>
+        <div class="step"><b>추천 이유</b><div id="finalReason" class="muted" style="margin-top:8px">실행 후 표시됩니다.</div></div>
+      </div>
+
+      <div class="hd"><h2>상승전환 상위</h2></div>
+      <div class="bd">
+        <div class="table-wrap"><div class="scroll">
+          <table><thead><tr><th>#</th><th>ticker</th><th>name</th><th>market</th><th>reversal</th><th>patterns</th></tr></thead><tbody id="reversalBody"></tbody></table>
+        </div></div>
+      </div>
+
+      <div class="hd"><h2>내일 상승확률 상위</h2></div>
+      <div class="bd">
+        <div class="table-wrap"><div class="scroll">
+          <table><thead><tr><th>#</th><th>ticker</th><th>name</th><th>market</th><th>prob score</th><th>est. prob</th><th>summary</th></tr></thead><tbody id="probBody"></tbody></table>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="hd"><h2>세력 개입 의심</h2></div>
+      <div class="bd">
+        <div class="table-wrap"><div class="scroll">
+          <table><thead><tr><th>#</th><th>ticker</th><th>name</th><th>market</th><th>suspicion</th><th>change %</th><th>range %</th></tr></thead><tbody id="susBody"></tbody></table>
+        </div></div>
+      </div>
+
+      <div class="hd"><h2>에러 / 로그</h2></div>
+      <div class="bd">
+        <div id="logBox" class="muted" style="white-space:pre-wrap;line-height:1.5">대기 중</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+function n(v,d=2){ return (v===null||v===undefined||Number.isNaN(v)) ? "-" : Number(v).toLocaleString("ko-KR",{maximumFractionDigits:d}); }
+
+async function checkHealth(base){
+  try{
+    const res = await fetch(base + "/api/health");
+    const j = await res.json();
+    $("mHealth").textContent = j.ok ? "OK" : "FAIL";
+  }catch(e){
+    $("mHealth").textContent = "FAIL";
+  }
+}
+
+function renderRows(id, rows, kind){
+  const el = $(id);
+  if(!rows || !rows.length){
+    el.innerHTML = '<tr><td colspan="7" class="muted">결과 없음</td></tr>';
+    return;
+  }
+  if(kind === "reversal"){
+    el.innerHTML = rows.map((r,i)=>`<tr><td>${i+1}</td><td class="mono">${r.ticker}</td><td>${r.name||"-"}</td><td>${r.market||"-"}</td><td><b>${r.reversal_score}</b></td><td>${(r.patterns||[]).join(", ")}</td></tr>`).join("");
+  } else if(kind === "prob"){
+    el.innerHTML = rows.map((r,i)=>`<tr><td>${i+1}</td><td class="mono">${r.ticker}</td><td>${r.name||"-"}</td><td>${r.market||"-"}</td><td><b>${r.prob_score}</b></td><td>${n(r.est_probability,1)}%</td><td>${r.summary||"-"}</td></tr>`).join("");
+  } else {
+    el.innerHTML = rows.map((r,i)=>`<tr><td>${i+1}</td><td class="mono">${r.ticker}</td><td>${r.name||"-"}</td><td>${r.market||"-"}</td><td><b>${r.suspicion_score}</b></td><td>${n(r.latest?.change_rate,2)}%</td><td>${n(r.latest?.range_pct,2)}%</td></tr>`).join("");
+  }
+}
+
+$("runBtn").addEventListener("click", async () => {
+  const base = $("apiBase").value.trim().replace(/\/$/, "");
+  const market = $("market").value;
+  const limit = $("limit").value;
+  const days = $("days").value;
+  $("logBox").textContent = "실행 중...";
+  await checkHealth(base);
+
+  const url = new URL(base + "/api/screen");
+  url.searchParams.set("limit", limit);
+  url.searchParams.set("days", days);
+  if(market) url.searchParams.set("market", market);
+
+  try{
+    const res = await fetch(url.toString());
+    const j = await res.json();
+    $("mChecked").textContent = j.universe_checked ?? "-";
+    $("mAnalysed").textContent = j.analysed ?? "-";
+    $("mLatest").textContent = j.latest_date ?? "-";
+
+    renderRows("reversalBody", j.reversal || [], "reversal");
+    renderRows("probBody", j.probability || [], "prob");
+    renderRows("susBody", j.suspicion || [], "sus");
+
+    if(j.final_pick){
+      const f = j.final_pick;
+      $("finalPick").innerHTML = `<span class="pill green">${f.ticker}</span> ${f.name || ""} (${f.market || "-"})`;
+      $("finalReason").textContent = `${f.summary} / final_score=${n(f.final_score,2)} / patterns=${(f.patterns || []).join(", ") || "-"}. 손실 비발생은 보장되지 않습니다.`;
+    } else {
+      $("finalPick").textContent = "-";
+      $("finalReason").textContent = "추천 후보 없음";
+    }
+
+    $("logBox").textContent = (j.errors && j.errors.length)
+      ? "일부 종목 에러:\n" + j.errors.join("\n")
+      : "정상 완료";
+  }catch(e){
+    $("logBox").textContent = "실행 실패: " + e;
+  }
+});
+
+checkHealth($("apiBase").value.trim());
+</script>
+</body>
+</html>
